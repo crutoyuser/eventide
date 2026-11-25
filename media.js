@@ -1,54 +1,39 @@
 'use strict';
 /**
- * Eventide — загрузка медиа в Vercel Blob.
- * Конфиг: env BLOB_READ_WRITE_TOKEN — Vercel сам подставляет его, когда
- * Blob-хранилище подключено к проекту (Storage → Blob). Отдельный аккаунт
- * Cloudinary не нужен.
+ * Eventide — хранение медиа прямо в Postgres (таблица media).
+ * Почему так: бесплатный хостинг (Render) не даёт постоянного диска, а
+ * внешние хранилища упёрлись в региональные ограничения. Файлы лежат в базе
+ * Neon рядом с остальными данными и отдаются через GET /media/:id.
+ * Лимит Neon free — объём базы, поэтому для старта ок, для роста — миграция
+ * на объектное хранилище позже (интерфейс uploadMedia менять не придётся).
  *
- * Для локальных тестов без хранилища: MEDIA_STUB=1 (или CLOUDINARY_STUB=1) —
- * загрузка заменяется стабом, возвращающим фиктивный URL (файл никуда не
- * уходит). В проде не включать.
+ * Для локальных тестов без базы: MEDIA_STUB=1 — загрузка заменяется стабом,
+ * возвращающим фиктивный URL (файл никуда не уходит). В проде не включать.
  */
 const crypto = require('crypto');
-const { put } = require('@vercel/blob');
+const { query } = require('./db');
 
 const STUB = process.env.MEDIA_STUB === '1' || process.env.CLOUDINARY_STUB === '1';
 
-function extFor(file) {
-  const name = file.originalname || '';
-  const dot = name.lastIndexOf('.');
-  if (dot > 0 && name.length - dot <= 6) return name.slice(dot).toLowerCase();
-  const mime = file.mimetype || '';
-  if (mime === 'image/png') return '.png';
-  if (mime === 'image/webp') return '.webp';
-  if (mime === 'image/gif') return '.gif';
-  if (mime.startsWith('image/')) return '.jpg';
-  if (mime === 'video/webm') return '.webm';
-  if (mime.startsWith('video/')) return '.mp4';
-  if (mime === 'audio/mpeg') return '.mp3';
-  if (mime === 'audio/mp4') return '.m4a';
-  if (mime === 'audio/ogg') return '.ogg';
-  if (mime === 'audio/wav' || mime === 'audio/x-wav') return '.wav';
-  return '';
-}
-
 /**
- * Загружает буфер multer-файла в Vercel Blob.
+ * Сохраняет буфер multer-файла в таблицу media.
  * @returns {Promise<{url: string, publicId: string}>}
  */
 async function uploadMedia(file, folder) {
-  const pathname = `eventide/${folder}/${Date.now()}-${crypto.randomBytes(6).toString('hex')}${extFor(file)}`;
+  const id = `${folder}-${Date.now()}-${crypto.randomBytes(8).toString('hex')}`;
   if (STUB) {
-    return { url: `https://stub.public.blob.vercel-storage.com/${pathname}`, publicId: pathname };
+    return { url: `https://stub.local/media/${id}`, publicId: id };
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    throw new Error('Хранилище не настроено: подключите Vercel Blob к проекту (env BLOB_READ_WRITE_TOKEN)');
-  }
-  const blob = await put(pathname, file.buffer, {
-    access: 'public',
-    contentType: file.mimetype || undefined,
-  });
-  return { url: blob.url, publicId: blob.pathname };
+  await query('INSERT INTO media (id, mime, data) VALUES ($1, $2, $3)',
+    [id, file.mimetype || 'application/octet-stream', file.buffer]);
+  return { url: `/media/${id}`, publicId: id };
 }
 
-module.exports = { uploadMedia };
+/** Достаёт файл из таблицы media по id (publicId). */
+async function getMedia(id) {
+  const r = await query('SELECT mime, data FROM media WHERE id = $1', [id]);
+  if (!r.rows.length) return null;
+  return { mime: r.rows[0].mime, data: r.rows[0].data };
+}
+
+module.exports = { uploadMedia, getMedia };

@@ -133,6 +133,12 @@ CREATE TABLE IF NOT EXISTS profile_songs (
   data TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS media (
+  id TEXT PRIMARY KEY,
+  mime TEXT NOT NULL,
+  data BYTEA NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 `;
 
 let initPromise = null;
