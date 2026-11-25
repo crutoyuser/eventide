@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="violet" data-font="modern">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eventide</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="snow" aria-hidden="true"></div>
+<div class="glow" aria-hidden="true"></div>
+
+<!-- Экран входа / регистрации -->
+<section id="auth-screen" class="auth-screen">
+  <div class="auth-card fade-in">
+    <div class="logo">❄ <span>Eventide</span></div>
+    <p class="tagline">вечерняя соцсеть: лента, рилсы, чаты, каналы и музыка</p>
+    <div class="tabs">
+      <button id="tab-login" class="tab active">Вход</button>
+      <button id="tab-register" class="tab">Регистрация</button>
+    </div>
+    <form id="auth-form">
+      <input id="auth-name" type="text" placeholder="Имя" autocomplete="name" hidden>
+      <input id="auth-username" type="text" placeholder="@username" autocomplete="username" required>
+      <input id="auth-password" type="password" placeholder="Пароль" autocomplete="current-password" required>
+      <div id="auth-error" class="error"></div>
+      <button type="submit" class="btn primary big" id="auth-submit">Войти</button>
+    </form>
+    <p class="hint">Юзернейм — один на человека и навсегда. Первый зарегистрированный аккаунт становится владельцем Eventide.</p>
+  </div>
+</section>
+
+<!-- Приложение -->
+<div id="app" class="app" hidden>
+  <header class="topbar">
+    <div class="logo small">❄ <span>Eventide</span></div>
+    <button id="global-search-btn" class="icon-btn" title="Поиск">🔍</button>
+  </header>
+
+  <main id="main">
+    <section id="view-feed" class="view"></section>
+    <section id="view-reels" class="view"></section>
+    <section id="view-chats" class="view"></section>
+    <section id="view-channels" class="view"></section>
+    <section id="view-music" class="view"></section>
+    <section id="view-profile" class="view"></section>
+  </main>
+
+  <!-- Мини-плеер: над нижней навигацией -->
+  <div id="player" class="player" hidden>
+    <img id="player-cover" class="player-cover" alt="">
+    <div class="player-meta">
+      <div id="player-title" class="player-title">—</div>
+      <div id="player-artist" class="player-artist">—</div>
+      <div class="player-progress"><div id="player-bar"></div></div>
+    </div>
+    <button id="player-prev" class="icon-btn">⏮</button>
+    <button id="player-toggle" class="icon-btn big">▶</button>
+    <button id="player-next" class="icon-btn">⏭</button>
+    <button id="player-close" class="icon-btn">✕</button>
+    <audio id="audio"></audio>
+  </div>
+
+  <nav class="bottomnav">
+    <button data-nav="feed" class="nav-btn active"><span>🏠</span><small>Лента</small></button>
+    <button data-nav="reels" class="nav-btn"><span>🎬</span><small>Рилсы</small></button>
+    <button data-nav="chats" class="nav-btn"><span>💬</span><small>Чаты</small></button>
+    <button data-nav="channels" class="nav-btn"><span>📣</span><small>Каналы</small></button>
+    <button data-nav="music" class="nav-btn"><span>🎵</span><small>Музыка</small></button>
+    <button data-nav="profile" class="nav-btn"><span>👤</span><small>Профиль</small></button>
+  </nav>
+</div>
+
+<!-- Модалки -->
+<div id="modal-root"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
