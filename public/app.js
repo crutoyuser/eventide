@@ -606,7 +606,7 @@ function renderSettings() {
         <div class="settings-item"><span>Кто может писать мне</span><span class="muted">Все</span></div>
       </div>
       <div class="settings-group"><h4>Данные и память</h4>
-        <div class="settings-item"><span>Медиа хранятся в облаке Eventide</span><span class="muted">Vercel Blob</span></div>
+        <div class="settings-item"><span>Медиа хранятся в облаке Eventide</span><span class="muted">база Eventide</span></div>
       </div>
       <div class="settings-group"><h4>Язык</h4>
         <div class="settings-item"><span>Язык интерфейса</span><span class="muted">Русский</span></div>
