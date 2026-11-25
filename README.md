@@ -6,7 +6,7 @@
 
 - **Vercel** — хостинг приложения: статика из `public/` раздаётся напрямую, всё остальное и `/api/*` уходит в serverless-функцию `api/index.js` (см. `vercel.json`)
 - **Neon Postgres** — база данных (подключение строкой `DATABASE_URL`, SSL включён автоматически для хостов Neon)
-- **Cloudinary** — все медиафайлы: аватарки, фото постов, видео рилсов, аудиотреки. В базе лежат только `secure_url` и `public_id` — постоянного диска приложению не нужно
+- **Vercel Blob** — все медиафайлы: аватарки, фото постов, видео рилсов, аудиотреки. В базе лежат только `secure_url` и `public_id` — постоянного диска приложению не нужно
 - **Node.js ≥ 18** + **Express 4** (`app.js` экспортирует app; `server.js` — только локальный запуск)
 - Пароли — `bcryptjs`, сессии — httpOnly-cookie + таблица `sessions`
 - Фронтенд — vanilla JS SPA без сборки: `public/index.html`, `public/app.js`, `public/style.css`
@@ -17,10 +17,10 @@
 | Переменная | Где нужна | Зачем |
 |---|---|---|
 | `DATABASE_URL` | прод + локально | Строка подключения Postgres, например `postgres://user:pass@ep-xxx.neon.tech/eventide?sslmode=require` |
-| `CLOUDINARY_URL` | прод + локально | Креды Cloudinary вида `cloudinary://api_key:api_secret@cloud_name` (берётся в консоли Cloudinary) |
+| `BLOB_READ_WRITE_TOKEN` | прод + локально | Креды Vercel Blob вида `cloudinary://api_key:api_secret@cloud_name` (берётся в консоли Vercel Blob) |
 | `SESSION_SECRET` | прод | Служебный секрет приложения. **На проде обязательно задайте свой** (длинная случайная строка) |
 | `PORT` | только локально | Порт `server.js`, по умолчанию `3000` |
-| `CLOUDINARY_STUB` | только тесты | `1` — загрузки в Cloudinary заменяются стабом (файлы никуда не уходят). В проде **не включать** |
+| `MEDIA_STUB` | только тесты | `1` — загрузки в Vercel Blob заменяются стабом (файлы никуда не уходят). В проде **не включать** |
 
 ## Локальный запуск
 
@@ -29,7 +29,7 @@
 ```bash
 npm install
 DATABASE_URL='postgres://user:pass@host:5432/eventide' \
-CLOUDINARY_URL='cloudinary://key:secret@cloud' \
+BLOB_READ_WRITE_TOKEN='cloudinary://key:secret@cloud' \
 SESSION_SECRET='длинная-случайная-строка' \
 npm start
 # открыто: http://localhost:3000
@@ -37,16 +37,16 @@ npm start
 
 Схема базы создаётся сама при первом запуске (`CREATE TABLE IF NOT EXISTS` в `db.js`).
 
-## Деплой на Vercel + Neon + Cloudinary (по шагам)
+## Деплой на Vercel + Neon + Vercel Blob (по шагам)
 
 1. **Neon** (база): зарегистрируйтесь на neon.tech → New Project → откройте **Connection Details** и скопируйте строку подключения — это ваш `DATABASE_URL`.
-2. **Cloudinary** (медиа): зарегистрируйтесь на cloudinary.com → в Dashboard скопируйте **Cloudinary URL** (`cloudinary://...`) — это ваш `CLOUDINARY_URL`.
+2. **Vercel Blob** (медиа): зарегистрируйтесь на vercel.com (Storage → Blob) → в Dashboard скопируйте **Vercel Blob URL** (`cloudinary://...`) — это ваш `BLOB_READ_WRITE_TOKEN`.
 3. **Vercel** (приложение): зарегистрируйтесь на vercel.com → **Add New → Project** → импортируйте этот репозиторий с GitHub. Настройки сборки менять не нужно: Vercel сам подхватит `vercel.json` и `api/index.js`, статику возьмёт из `public/`.
-4. В настройках проекта Vercel (**Settings → Environment Variables**) добавьте три переменные: `DATABASE_URL`, `CLOUDINARY_URL`, `SESSION_SECRET` (придумайте длинную случайную строку).
+4. В настройках проекта Vercel (**Settings → Environment Variables**) добавьте три переменные: `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN`, `SESSION_SECRET` (придумайте длинную случайную строку).
 5. Нажмите **Deploy**. После деплоя откройте выданный адрес `*.vercel.app` — приложение работает.
 6. **Сразу зарегистрируйте первый аккаунт сами** — самый первый зарегистрированный становится владельцем (см. ниже).
 
-⚠️ Ограничение бесплатного Vercel: размер одного запроса к serverless-функции — около 4.5 МБ, поэтому большие видео рилсов через бесплатный тариф могут не пройти. Для старта и небольших файлов хватает; если упрётесь — рилсы можно будет вынести в прямую загрузку в Cloudinary с браузера.
+⚠️ Ограничение бесплатного Vercel: размер одного запроса к serverless-функции — около 4.5 МБ, поэтому большие видео рилсов через бесплатный тариф могут не пройти. Для старта и небольших файлов хватает; если упрётесь — рилсы можно будет вынести в прямую загрузку в Vercel Blob с браузера.
 
 ## Важные правила продукта
 
@@ -63,7 +63,7 @@ server.js          — локальный запуск: require app + listen POR
 api/index.js       — точка входа Vercel serverless: module.exports = require('../app')
 vercel.json        — rewrites: /api/* и SPA-маршруты → /api/index.js, статика public/ — напрямую
 db.js              — пул pg (DATABASE_URL), создание схемы при старте
-media.js           — загрузка медиа в Cloudinary (официальный SDK), типы image/video
+media.js           — загрузка медиа в Vercel Blob (официальный SDK), типы image/video
 public/index.html  — оболочка SPA
 public/app.js      — вся клиентская логика (лента, рилсы, чаты, каналы, музыка, профиль)
 public/style.css   — темы (CSS-переменные: фиолетовая/красно-чёрная/морозная/таёжная), шрифты, анимации

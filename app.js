@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Eventide — серверная версия соцсети (Express-приложение).
- * Прод-стек: Vercel (serverless, api/index.js) + Neon Postgres + Cloudinary.
+ * Прод-стек: Vercel (serverless, api/index.js) + Neon Postgres + Vercel Blob.
  * Локально: server.js (node server.js, слушает PORT).
  * Этот модуль только экспортирует app — listen здесь нет.
  */
@@ -67,7 +67,7 @@ ready.catch((e) => console.error('[db] init failed:', e.message));
 app.use((req, res, next) => { ready.then(() => next(), next); });
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Файлы держим в памяти и сразу отправляем в Cloudinary (диска на Vercel нет).
+// Файлы держим в памяти и сразу отправляем в Vercel Blob (диска на Vercel нет).
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 60 * 1024 * 1024 } });
 const audioUpload = multer({
   storage: multer.memoryStorage(),
