@@ -2,31 +2,51 @@
 
 Настоящий код для запуска на хостинге (не демо-артефакт): лента, рилсы, личные чаты, каналы и музыка в тёмной вечерне-зимней эстетике.
 
-## Стек
+## Стек (продакшен — бесплатные тарифы)
 
-- **Node.js ≥ 18** + **Express 4**
-- **SQLite** через `better-sqlite3` — один файл `data/eventide.db`, создаётся сам при первом запуске
+- **Vercel** — хостинг приложения: статика из `public/` раздаётся напрямую, всё остальное и `/api/*` уходит в serverless-функцию `api/index.js` (см. `vercel.json`)
+- **Neon Postgres** — база данных (подключение строкой `DATABASE_URL`, SSL включён автоматически для хостов Neon)
+- **Cloudinary** — все медиафайлы: аватарки, фото постов, видео рилсов, аудиотреки. В базе лежат только `secure_url` и `public_id` — постоянного диска приложению не нужно
+- **Node.js ≥ 18** + **Express 4** (`app.js` экспортирует app; `server.js` — только локальный запуск)
 - Пароли — `bcryptjs`, сессии — httpOnly-cookie + таблица `sessions`
-- Загрузки — `multer`, файлы лежат в `data/uploads/` и раздаются как `/uploads/...`
 - Фронтенд — vanilla JS SPA без сборки: `public/index.html`, `public/app.js`, `public/style.css`
 - Музыкальный каталог — публичный API **Deezer** (без ключей), проксируется сервером
 
-## Запуск
+## Переменные окружения
+
+| Переменная | Где нужна | Зачем |
+|---|---|---|
+| `DATABASE_URL` | прод + локально | Строка подключения Postgres, например `postgres://user:pass@ep-xxx.neon.tech/eventide?sslmode=require` |
+| `CLOUDINARY_URL` | прод + локально | Креды Cloudinary вида `cloudinary://api_key:api_secret@cloud_name` (берётся в консоли Cloudinary) |
+| `SESSION_SECRET` | прод | Служебный секрет приложения. **На проде обязательно задайте свой** (длинная случайная строка) |
+| `PORT` | только локально | Порт `server.js`, по умолчанию `3000` |
+| `CLOUDINARY_STUB` | только тесты | `1` — загрузки в Cloudinary заменяются стабом (файлы никуда не уходят). В проде **не включать** |
+
+## Локальный запуск
+
+Нужен любой доступный Postgres (хоть локальный, хоть Neon):
 
 ```bash
 npm install
+DATABASE_URL='postgres://user:pass@host:5432/eventide' \
+CLOUDINARY_URL='cloudinary://key:secret@cloud' \
+SESSION_SECRET='длинная-случайная-строка' \
 npm start
 # открыто: http://localhost:3000
 ```
 
-## Переменные окружения
+Схема базы создаётся сама при первом запуске (`CREATE TABLE IF NOT EXISTS` в `db.js`).
 
-| Переменная | По умолчанию | Зачем |
-|---|---|---|
-| `PORT` | `3000` | Порт сервера |
-| `SESSION_SECRET` | dev-строка в коде | Секрет для служебных токенов. **На проде обязательно задайте свой.** |
+## Деплой на Vercel + Neon + Cloudinary (по шагам)
 
-Пример: `PORT=8080 SESSION_SECRET='длинная-случайная-строка' npm start`
+1. **Neon** (база): зарегистрируйтесь на neon.tech → New Project → откройте **Connection Details** и скопируйте строку подключения — это ваш `DATABASE_URL`.
+2. **Cloudinary** (медиа): зарегистрируйтесь на cloudinary.com → в Dashboard скопируйте **Cloudinary URL** (`cloudinary://...`) — это ваш `CLOUDINARY_URL`.
+3. **Vercel** (приложение): зарегистрируйтесь на vercel.com → **Add New → Project** → импортируйте этот репозиторий с GitHub. Настройки сборки менять не нужно: Vercel сам подхватит `vercel.json` и `api/index.js`, статику возьмёт из `public/`.
+4. В настройках проекта Vercel (**Settings → Environment Variables**) добавьте три переменные: `DATABASE_URL`, `CLOUDINARY_URL`, `SESSION_SECRET` (придумайте длинную случайную строку).
+5. Нажмите **Deploy**. После деплоя откройте выданный адрес `*.vercel.app` — приложение работает.
+6. **Сразу зарегистрируйте первый аккаунт сами** — самый первый зарегистрированный становится владельцем (см. ниже).
+
+⚠️ Ограничение бесплатного Vercel: размер одного запроса к serverless-функции — около 4.5 МБ, поэтому большие видео рилсов через бесплатный тариф могут не пройти. Для старта и небольших файлов хватает; если упрётесь — рилсы можно будет вынести в прямую загрузку в Cloudinary с браузера.
 
 ## Важные правила продукта
 
@@ -38,15 +58,15 @@ npm start
 ## Структура
 
 ```
-server.js          — весь бэкенд: API, БД, статика, прокси Deezer
+app.js             — весь бэкенд: Express-приложение (API, статика, прокси Deezer), module.exports = app
+server.js          — локальный запуск: require app + listen PORT
+api/index.js       — точка входа Vercel serverless: module.exports = require('../app')
+vercel.json        — rewrites: /api/* и SPA-маршруты → /api/index.js, статика public/ — напрямую
+db.js              — пул pg (DATABASE_URL), создание схемы при старте
+media.js           — загрузка медиа в Cloudinary (официальный SDK), типы image/video
 public/index.html  — оболочка SPA
 public/app.js      — вся клиентская логика (лента, рилсы, чаты, каналы, музыка, профиль)
 public/style.css   — темы (CSS-переменные: фиолетовая/красно-чёрная/морозная/таёжная), шрифты, анимации
-data/              — создаётся при запуске: eventide.db + uploads/ (в .gitignore)
 ```
-
-## Деплой (кратко)
-
-Подойдёт любой хостинг с Node.js и постоянным диском (VPS, Render/Railway/Fly с volume и т.п.): залить код, `npm install`, задать `PORT` и `SESSION_SECRET`, `npm start`. **Важно:** диск с `data/` должен быть постоянным — там база и все загрузки пользователей. GitHub Pages не подходит (там нет сервера).
 
 Результаты проверки — в [TESTING.md](TESTING.md).
