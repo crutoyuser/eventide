@@ -1,9 +1,9 @@
 'use strict';
 /**
  * Eventide — локальный запуск. Само приложение — в app.js
- * (на Vercel его подхватывает api/index.js как serverless-функцию).
+ *
  * Запуск: npm install && npm start  (порт: env PORT, по умолчанию 3000)
- * Нужны env: DATABASE_URL (Postgres), BLOB_READ_WRITE_TOKEN (медиа), SESSION_SECRET.
+ * Нужны env: DATABASE_URL (Postgres — данные и медиа), SESSION_SECRET.
  */
 const app = require('./app');
 
