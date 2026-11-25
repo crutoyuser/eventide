@@ -4,9 +4,9 @@
 
 ## Стек (продакшен — бесплатные тарифы)
 
-- **Vercel** — хостинг приложения: статика из `public/` раздаётся напрямую, всё остальное и `/api/*` уходит в serverless-функцию `api/index.js` (см. `vercel.json`)
+- **Render** — хостинг приложения: обычный Node-сервер (`npm start`), статика и API в одном процессе
 - **Neon Postgres** — база данных (подключение строкой `DATABASE_URL`, SSL включён автоматически для хостов Neon)
-- **Vercel Blob** — все медиафайлы: аватарки, фото постов, видео рилсов, аудиотреки. В базе лежат только `secure_url` и `public_id` — постоянного диска приложению не нужно
+- **Медиафайлы** (аватарки, фото постов, видео рилсов, аудиотреки) хранятся в той же базе Neon, таблица `media`, и отдаются через `/media/:id` — постоянного диска приложению не нужно
 - **Node.js ≥ 18** + **Express 4** (`app.js` экспортирует app; `server.js` — только локальный запуск)
 - Пароли — `bcryptjs`, сессии — httpOnly-cookie + таблица `sessions`
 - Фронтенд — vanilla JS SPA без сборки: `public/index.html`, `public/app.js`, `public/style.css`
@@ -17,10 +17,9 @@
 | Переменная | Где нужна | Зачем |
 |---|---|---|
 | `DATABASE_URL` | прод + локально | Строка подключения Postgres, например `postgres://user:pass@ep-xxx.neon.tech/eventide?sslmode=require` |
-| `BLOB_READ_WRITE_TOKEN` | прод + локально | Креды Vercel Blob вида `cloudinary://api_key:api_secret@cloud_name` (берётся в консоли Vercel Blob) |
 | `SESSION_SECRET` | прод | Служебный секрет приложения. **На проде обязательно задайте свой** (длинная случайная строка) |
 | `PORT` | только локально | Порт `server.js`, по умолчанию `3000` |
-| `MEDIA_STUB` | только тесты | `1` — загрузки в Vercel Blob заменяются стабом (файлы никуда не уходят). В проде **не включать** |
+| `MEDIA_STUB` | только тесты | `1` — загрузки медиа заменяются стабом (файлы никуда не уходят). В проде **не включать** |
 
 ## Локальный запуск
 
@@ -61,10 +60,8 @@ npm start
 ```
 app.js             — весь бэкенд: Express-приложение (API, статика, прокси Deezer), module.exports = app
 server.js          — локальный запуск: require app + listen PORT
-api/index.js       — точка входа Vercel serverless: module.exports = require('../app')
-vercel.json        — rewrites: /api/* и SPA-маршруты → /api/index.js, статика public/ — напрямую
 db.js              — пул pg (DATABASE_URL), создание схемы при старте
-media.js           — загрузка медиа в Vercel Blob (официальный SDK), типы image/video
+media.js           — сохранение медиа в Postgres (таблица media) и чтение оттуда
 public/index.html  — оболочка SPA
 public/app.js      — вся клиентская логика (лента, рилсы, чаты, каналы, музыка, профиль)
 public/style.css   — темы (CSS-переменные: фиолетовая/красно-чёрная/морозная/таёжная), шрифты, анимации
